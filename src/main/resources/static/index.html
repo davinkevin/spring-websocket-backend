@@ -1,10 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html ng-app="demoApp">
 <head>
     <title>Hello WebSocket</title>
+</head>
+<body ng-controller="aController as ctrl">
+<div>
+    <h2>Messages comming from server </h2>
+    <div>
+        <button ng-click="ctrl.closeSocketFromServer()">Close connection from server</button>
+        <button ng-click="ctrl.closeSocketFromClient()">Close connection from Client</button>
+    </div>
+    <ul>
+        <li ng-repeat="message in ctrl.messages | orderBy: '-id'"> {{ message.body }}</li>
+    </ul>
+</div>
     <script src="sockjs-0.3.4.js"></script>
     <script src="stomp.js"></script>
+    <script src="angular.js"></script>
+    <script src="angularStompDK.js"></script>
     <script type="text/javascript">
+        angular.module('demoApp', [
+            'AngularStompDK'
+        ])
+        .config(stompConfig)
+        .controller('aController', aController);
+
+        function stompConfig(ngstompProvider){
+            ngstompProvider
+                .url('/hello')
+                .credential('login', 'password')
+                .class(SockJS); // <-- Will be used by StompJS to do the connection
+        }
+
+        function aController(ngstomp, $http) {
+            var vm = this;
+
+            vm.webSocketEndPoint = '/topic/hello';
+            vm.messages = [];
+
+            ngstomp
+                .subscribe(vm.webSocketEndPoint, whatToDoWhenMessageComming);
+
+            function whatToDoWhenMessageComming(message) {
+                vm.messages.push(JSON.parse(message.body));
+            }
+
+            vm.closeSocketFromServer = function closeSocket(){
+                return $http.get('/closeAll');
+            };
+
+            vm.closeSocketFromClient = function() {
+                return ngstomp.disconnect();
+            }
+        }
+
         function connect() {
             var socket = new SockJS('/hello');
             var stompClient = Stomp.over(socket);
@@ -15,12 +64,5 @@
             });
         }
     </script>
-</head>
-<body>
-<div>
-    <div>
-        <button id="connect" onclick="connect();">Connect</button>
-    </div>
-</div>
 </body>
 </html>
