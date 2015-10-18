@@ -47,7 +47,7 @@ public class WebSocketConfig extends WebSocketMessageBrokerConfigurationSupport 
         super.addReturnValueHandlers(returnValueHandlers);
     }
 
-    	@Override
+    @Override
 	public void configureMessageBroker(MessageBrokerRegistry config) {
 		config.enableSimpleBroker("/topic");
 		config.setApplicationDestinationPrefixes("/app");
