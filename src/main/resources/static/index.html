@@ -53,16 +53,6 @@
                 return ngstomp.disconnect();
             }
         }
-
-        function connect() {
-            var socket = new SockJS('/hello');
-            var stompClient = Stomp.over(socket);
-            stompClient.connect({}, function(frame) {
-                document.getElementById('connect').disabled = true;
-                console.log('Connected: ' + frame);
-                console.log('Lets wait until server disconnects websocket....')
-            });
-        }
     </script>
 </body>
 </html>
