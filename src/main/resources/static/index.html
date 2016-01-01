@@ -7,8 +7,11 @@
 <div>
     <h2>Messages comming from server </h2>
     <div>
-        <button ng-click="ctrl.closeSocketFromServer()">Close connection from server</button>
-        <button ng-click="ctrl.closeSocketFromClient()">Close connection from Client</button>
+        <button ng-click="ctrl.closeSocketFromServer()">Close from server</button>
+    </div>
+    <div>
+        <button ng-click="ctrl.connectFromClient()">Open from Client</button>
+        <button ng-click="ctrl.closeSocketFromClient()">Close from Client</button>
     </div>
     <ul>
         <li ng-repeat="message in ctrl.messages | orderBy: '-id'"> {{ message.body }}</li>
@@ -29,6 +32,7 @@
             ngstompProvider
                 .url('/hello')
                 .credential('login', 'password')
+                /*.heartbeat(12345, 12345)*/
                 .class(SockJS); // <-- Will be used by StompJS to do the connection
         }
 
@@ -38,8 +42,7 @@
             vm.webSocketEndPoint = '/topic/hello';
             vm.messages = [];
 
-            ngstomp
-                .subscribe(vm.webSocketEndPoint, whatToDoWhenMessageComming);
+            ngstomp.subscribe(vm.webSocketEndPoint, whatToDoWhenMessageComming);
 
             function whatToDoWhenMessageComming(message) {
                 vm.messages.push(JSON.parse(message.body));
@@ -51,7 +54,13 @@
 
             vm.closeSocketFromClient = function() {
                 return ngstomp.disconnect();
-            }
+            };
+
+            vm.connectFromClient = function () {
+                ngstomp
+                    .connect()
+                    .then(function() { ngstomp.subscribe(vm.webSocketEndPoint, whatToDoWhenMessageComming); });
+            };
         }
     </script>
 </body>
