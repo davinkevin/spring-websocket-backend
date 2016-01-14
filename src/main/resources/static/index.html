@@ -9,59 +9,105 @@
     <div>
         <button ng-click="ctrl.closeSocketFromServer()">Close from server</button>
     </div>
+    <br>
     <div>
         <button ng-click="ctrl.connectFromClient()">Open from Client</button>
         <button ng-click="ctrl.closeSocketFromClient()">Close from Client</button>
     </div>
-    <ul>
-        <li ng-repeat="message in ctrl.messages | orderBy: '-id'"> {{ message.body }}</li>
-    </ul>
+    <br>
+    <div>
+        <button ng-click="ctrl.clearAll()">Clear all Messages</button>
+    </div>
+    <br>
+    <div>
+        <button ng-click="ctrl.closeFirst()">Close First</button>
+        <ul>
+            <li ng-repeat="message in ctrl.messages | orderBy: '-id'"> {{ message.body }}</li>
+        </ul>
+    </div>
+    <div>
+        <button ng-click="ctrl.closeLast()">Close Last</button>
+        <ul>
+            <li ng-repeat="message in ctrl.anotherMessage | orderBy: '-id'"> {{ message.body }}</li>
+        </ul>
+    </div>
 </div>
-    <script src="sockjs-0.3.4.js"></script>
-    <script src="stomp.js"></script>
-    <script src="angular.js"></script>
-    <script src="angularStompDK.js"></script>
-    <script type="text/javascript">
-        angular.module('demoApp', [
-            'AngularStompDK'
-        ])
-        .config(stompConfig)
-        .controller('aController', aController);
+<script src="sockjs-0.3.4.js"></script>
+<script src="stomp.js"></script>
+<script src="angular.js"></script>
+<script src="angularStompDK.js"></script>
+<script type="text/javascript">
+    angular.module('demoApp', [
+                'AngularStompDK'
+            ])
+            .config(stompConfig)
+            .controller('aController', aController);
 
-        function stompConfig(ngstompProvider){
-            ngstompProvider
+    function stompConfig(ngstompProvider){
+        ngstompProvider
                 .url('/hello')
                 .credential('login', 'password')
-                /*.heartbeat(12345, 12345)*/
-                .class(SockJS); // <-- Will be used by StompJS to do the connection
+                .class(SockJS);
+    }
+
+    function aController(ngstomp, $http, $scope) {
+        var vm = this;
+
+        vm.webSocketEndPoint = '/topic/hello';
+        vm.messages = [];
+        vm.anotherMessage = [];
+
+        function subscribeToSubject() {
+            vm.unsubscriber = ngstomp
+                .subscribeTo(vm.webSocketEndPoint)
+                    .callback(whatToDoWhenMessageComming)
+                    .bindTo($scope)
+                    .withBodyInJson()
+                .and()
+                .subscribeTo(vm.webSocketEndPoint)
+                    .callback(anotherThingToDoWithMessage)
+                    .bindTo($scope)
+                    .withBodyInJson()
+                .connect();
         }
 
-        function aController(ngstomp, $http) {
-            var vm = this;
+        function whatToDoWhenMessageComming(message) {
+            vm.messages.push(message.body);
+        }
 
-            vm.webSocketEndPoint = '/topic/hello';
+        function anotherThingToDoWithMessage(message) {
+            vm.anotherMessage.push(message.body);
+        }
+
+        vm.closeSocketFromServer = function closeSocket(){
+            return $http.get('/closeAll');
+        };
+
+        vm.closeSocketFromClient = function() {
+            return ngstomp.disconnect();
+        };
+
+        vm.connectFromClient = function () {
+            ngstomp
+                .connect()
+                .then(subscribeToSubject);
+        };
+
+        vm.closeFirst = function () {
+            vm.unsubscriber.unSubscribeNth(1);
+        };
+
+        vm.closeLast = function () {
+            vm.unsubscriber.unSubscribeNth(2);
+        };
+
+        vm.clearAll = function() {
+            vm.anotherMessage = [];
             vm.messages = [];
+        };
 
-            ngstomp.subscribe(vm.webSocketEndPoint, whatToDoWhenMessageComming);
-
-            function whatToDoWhenMessageComming(message) {
-                vm.messages.push(JSON.parse(message.body));
-            }
-
-            vm.closeSocketFromServer = function closeSocket(){
-                return $http.get('/closeAll');
-            };
-
-            vm.closeSocketFromClient = function() {
-                return ngstomp.disconnect();
-            };
-
-            vm.connectFromClient = function () {
-                ngstomp
-                    .connect()
-                    .then(function() { ngstomp.subscribe(vm.webSocketEndPoint, whatToDoWhenMessageComming); });
-            };
-        }
-    </script>
+        subscribeToSubject();
+    }
+</script>
 </body>
 </html>
