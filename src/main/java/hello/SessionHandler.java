@@ -1,7 +1,6 @@
 package hello;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -14,32 +13,33 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Slf4j
 @Service
 public class SessionHandler {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SessionHandler.class);
+
     private final Map<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
-    AtomicInteger number = new AtomicInteger(0);
+    private AtomicInteger number = new AtomicInteger(0);
 
-    @Autowired SessionHandler(SimpMessagingTemplate template) {
-
-        /*Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(this::closeAll, 10, 10, TimeUnit.SECONDS);*/
+    @Autowired
+    SessionHandler(SimpMessagingTemplate template) {
         Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(sendMessage(template, number), 0, 2, TimeUnit.SECONDS);
     }
 
     private Runnable sendMessage(SimpMessagingTemplate template, AtomicInteger number) {
         return () -> {
             Integer id = number.addAndGet(1);
-            template.convertAndSend("/topic/hello", new Message(id, "aMessage n°" + id));
+            template.convertAndSend("/topic/hello", new Message(id, "Hello n°" + id));
+            template.convertAndSend("/topic/goodbye", new Message(id, "GoodBye n°" + id));
         };
     }
 
-    public void closeAll() {
-        LOGGER.info("Closing all current session");
+    void closeAll() {
+        log.info("Closing all current session");
         sessionMap.keySet().forEach(this::close);
     }
 
-    public void register(WebSocketSession session) {
+    void register(WebSocketSession session) {
         sessionMap.put(session.getId(), session);
     }
 
@@ -48,7 +48,7 @@ public class SessionHandler {
             sessionMap.get(key).close();
             sessionMap.remove(key);
         } catch (IOException e) {
-            LOGGER.error("Error while closing websocket session: {}", e);
+            log.error("Error while closing websocket session: {}", e);
         }
     }
 }

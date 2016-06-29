@@ -55,7 +55,8 @@ public class WebSocketConfig extends WebSocketMessageBrokerConfigurationSupport 
 
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/hello").withSockJS();
+        registry.addEndpoint("/hello").setAllowedOrigins("*").withSockJS();
+        registry.addEndpoint("/goodbye").setAllowedOrigins("*").withSockJS();
 	}
 
     @Bean

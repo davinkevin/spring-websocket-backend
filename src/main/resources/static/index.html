@@ -3,11 +3,11 @@
 <head>
     <title>Hello WebSocket</title>
 </head>
-<body ng-controller="aController as ctrl">
-<div>
+<body>
+<div ng-controller="aController as ctrl">
     <h2>Messages comming from server </h2>
     <div>
-        <button ng-click="ctrl.closeSocketFromServer()">Close from server</button>
+        <button ng-click="ctrl.closeSocketFromServer()">Loose connection from server</button>
     </div>
     <br>
     <div>
@@ -19,33 +19,47 @@
         <button ng-click="ctrl.clearAll()">Clear all Messages</button>
     </div>
     <br>
-    <div>
-        <button ng-click="ctrl.closeFirst()">Close First</button>
+    <div style="width: 25%; float: left">
+        <button ng-click="ctrl.closeNth(0)">Close 1st</button>
+        <button ng-click="ctrl.closeHello()">Close Hello</button>
         <ul>
-            <li ng-repeat="message in ctrl.messages | orderBy: '-id'"> {{ message.body }}</li>
+            <li ng-repeat="message in ctrl.messages | orderBy: '-id' | limitTo : 10"> {{ message.body }}</li>
         </ul>
     </div>
-    <div>
-        <button ng-click="ctrl.closeLast()">Close Last</button>
+    <div style="width: 25%; float: left">
+        <button ng-click="ctrl.closeNth(1)">Close 2nd</button>
+        <button ng-click="ctrl.closeGoodbye()">Close GoodBye</button>
         <ul>
-            <li ng-repeat="message in ctrl.anotherMessage | orderBy: '-id'"> {{ message.body }}</li>
+            <li ng-repeat="message in ctrl.anotherMessage | orderBy: '-id' | limitTo :  10"> {{ message.body }}</li>
+        </ul>
+    </div>
+    <div style="width: 25%; float: left">
+        <button ng-click="ctrl.closeNth(2)">Close 3rd</button>
+        <button ng-click="ctrl.closeGoodbye()">Close GoodBye</button>
+        <ul>
+            <li ng-repeat="message in ctrl.copyOfAnotherMessage | orderBy: '-id' | limitTo : 10"> {{ message.body }}</li>
         </ul>
     </div>
 </div>
 <script src="sockjs-0.3.4.js"></script>
 <script src="stomp.js"></script>
 <script src="angular.js"></script>
-<script src="angularStompDK.js"></script>
+<script src="angular-stomp.min.js"></script>
 <script type="text/javascript">
-    angular.module('demoApp', [
-                'AngularStompDK'
-            ])
+    angular.module('demoApp', ['AngularStompDK'])
             .config(stompConfig)
-            .controller('aController', aController);
+            .controller('aController', aController)
+            .run(countDigest)
+    ;
+
+    function countDigest($rootScope) {
+        $rootScope.numberOfDigest = 0;
+        $rootScope.$watch(function() { console.log($rootScope.numberOfDigest++); })
+    }
 
     function stompConfig(ngstompProvider){
         ngstompProvider
-                .url('/hello')
+                .url('http://localhost:8080/hello')
                 .credential('login', 'password')
                 .class(SockJS);
     }
@@ -53,19 +67,26 @@
     function aController(ngstomp, $http, $scope) {
         var vm = this;
 
-        vm.webSocketEndPoint = '/topic/hello';
+        vm.helloEndpoint = '/topic/hello';
+        vm.goodByeEndpoint = '/topic/goodbye';
         vm.messages = [];
         vm.anotherMessage = [];
+        vm.copyOfAnotherMessage = [];
 
         function subscribeToSubject() {
             vm.unsubscriber = ngstomp
-                .subscribeTo(vm.webSocketEndPoint)
+                .subscribeTo(vm.helloEndpoint)
                     .callback(whatToDoWhenMessageComming)
                     .bindTo($scope)
                     .withBodyInJson()
                 .and()
-                .subscribeTo(vm.webSocketEndPoint)
+                .subscribeTo(vm.goodByeEndpoint)
                     .callback(anotherThingToDoWithMessage)
+                    .bindTo($scope)
+                    .withBodyInJson()
+                .and()
+                    .subscribeTo(vm.goodByeEndpoint)
+                    .callback(copyOfMessage)
                     .bindTo($scope)
                     .withBodyInJson()
                 .connect();
@@ -77,6 +98,13 @@
 
         function anotherThingToDoWithMessage(message) {
             vm.anotherMessage.push(message.body);
+        }
+
+        function copyOfMessage(message) {
+            let newMessage = { id: message.body.id, body: 'Copy ' + message.body.body};
+            vm.copyOfAnotherMessage.push(newMessage);
+            /* Code used if withDigest is false during init */
+            /*$scope.$applyAsync(function() { vm.copyOfAnotherMessage.push(newMessage); });*/
         }
 
         vm.closeSocketFromServer = function closeSocket(){
@@ -97,13 +125,26 @@
             vm.unsubscriber.unSubscribeNth(1);
         };
 
+        vm.closeHello = function () {
+            vm.unsubscriber.unSubscribeOf(vm.helloEndpoint);
+        };
+
+        vm.closeNth = function(cpt) {
+            vm.unsubscriber.unSubscribeNth(cpt);
+        };
+
         vm.closeLast = function () {
             vm.unsubscriber.unSubscribeNth(2);
+        };
+
+        vm.closeGoodbye = function () {
+            vm.unsubscriber.unSubscribeOf(vm.goodByeEndpoint);
         };
 
         vm.clearAll = function() {
             vm.anotherMessage = [];
             vm.messages = [];
+            vm.copyOfAnotherMessage = [];
         };
 
         subscribeToSubject();
