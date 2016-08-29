@@ -44,7 +44,7 @@
 <script src="sockjs-0.3.4.js"></script>
 <script src="stomp.js"></script>
 <script src="angular.js"></script>
-<script src="angular-stomp.min.js"></script>
+<script src="angular-stomp.js"></script>
 <script type="text/javascript">
     angular.module('demoApp', ['AngularStompDK'])
             .config(stompConfig)
@@ -61,7 +61,9 @@
         ngstompProvider
                 .url('http://localhost:8080/hello')
                 .credential('login', 'password')
-                .class(SockJS);
+                .class(SockJS)
+                .autoConnect(false)
+        ;
     }
 
     function aController(ngstomp, $http, $scope) {

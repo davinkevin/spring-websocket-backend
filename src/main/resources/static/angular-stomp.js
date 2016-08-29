@@ -327,25 +327,44 @@ $__System.register('a', ['5', '6', '8', '9'], function (_export) {
                     this.$timeout = $timeout;
                     this.connections = [];
 
-                    this.connect();
+                    this.$initConnectionState();
+                    if (settings.autoConnect) {
+                        this.connect();
+                    }
                 }
 
                 _createClass(ngStompWebSocket, [{
                     key: 'connect',
                     value: function connect() {
+                        this.$initConnectionState();
+                        return this.$connect();
+                    }
+                }, {
+                    key: '$initConnectionState',
+                    value: function $initConnectionState() {
+                        this.deferred && this.deferred.reject();
+                        this.deferred = this.$q.defer();
+                        this.connectionState = this.deferred.promise;
+                    }
+                }, {
+                    key: '$connect',
+                    value: function $connect() {
                         var _this = this;
 
                         this.$setConnection();
+
                         this.stompClient.connect(this.settings.login, this.settings.password, function () {
-                            _this.deferred.resolve();
+                            return _this.deferred.resolve();
                         }, function () {
                             _this.deferred.reject();
+                            _this.$initConnectionState();
                             _this.settings.timeOut >= 0 && _this.$timeout(function () {
-                                _this.connect();
+                                _this.$connect();
                                 _this.$reconnectAll();
                             }, _this.settings.timeOut);
                         }, this.settings.vhost);
-                        return this.promiseResult;
+
+                        return this.connectionState;
                     }
                 }, {
                     key: 'subscribe',
@@ -356,7 +375,7 @@ $__System.register('a', ['5', '6', '8', '9'], function (_export) {
 
                         if (json === undefined) json = false;
 
-                        this.promiseResult.then(function () {
+                        this.connectionState.then(function () {
                             return _this2.$stompSubscribe(queue, callback, header, scope, json, digest);
                         }, function () {
                             return _this2.$$addToConnectionQueue({ queue: queue, callback: callback, header: header, scope: scope, json: json, digest: digest });
@@ -375,7 +394,7 @@ $__System.register('a', ['5', '6', '8', '9'], function (_export) {
                     value: function unsubscribe(url) {
                         var _this3 = this;
 
-                        this.promiseResult.then(function () {
+                        this.connectionState.then(function () {
                             return _this3.$stompUnSubscribe(url);
                         });
                         return this;
@@ -389,7 +408,7 @@ $__System.register('a', ['5', '6', '8', '9'], function (_export) {
 
                         var sendDeffered = this.$q.defer();
 
-                        this.promiseResult.then(function () {
+                        this.connectionState.then(function () {
                             _this4.stompClient.send(queue, header, JSON.stringify(data));
                             sendDeffered.resolve();
                         });
@@ -449,8 +468,6 @@ $__System.register('a', ['5', '6', '8', '9'], function (_export) {
                             this.stompClient.heartbeat.outgoing = this.settings.heartbeat.outgoing;
                             this.stompClient.heartbeat.incoming = this.settings.heartbeat.incoming;
                         }
-                        this.deferred = this.$q.defer();
-                        this.promiseResult = this.deferred.promise;
                     }
                 }, {
                     key: '$unRegisterScopeOnDestroy',
@@ -498,6 +515,21 @@ $__System.register('a', ['5', '6', '8', '9'], function (_export) {
                     value: function $$connectionEquality(c1, c2) {
                         return c1.queue === c2.queue && c1.callback === c2.callback && c1.header === c2.header && c1.scope === c2.scope && c1.digest === c2.digest;
                     }
+                }, {
+                    key: 'login',
+                    set: function set(login) {
+                        this.settings.login = login;
+                    }
+                }, {
+                    key: 'password',
+                    set: function set(password) {
+                        this.settings.password = password;
+                    }
+                }, {
+                    key: 'url',
+                    set: function set(url) {
+                        this.settings.url = url;
+                    }
                 }]);
 
                 return ngStompWebSocket;
@@ -527,10 +559,8 @@ $__System.register("b", ["5", "6", "a"], function (_export) {
 
                     this.settings = {
                         timeOut: 5000,
-                        heartbeat: {
-                            outgoing: 10000,
-                            incoming: 10000
-                        }
+                        heartbeat: { outgoing: 10000, incoming: 10000 },
+                        autoConnect: true
                     };
                 }
 
@@ -582,6 +612,12 @@ $__System.register("b", ["5", "6", "a"], function (_export) {
                     value: function heartbeat(outgoing, incoming) {
                         this.settings.heartbeat.outgoing = outgoing;
                         this.settings.heartbeat.incoming = incoming;
+                        return this;
+                    }
+                }, {
+                    key: "autoConnect",
+                    value: function autoConnect(autoConnectionDefaultValue) {
+                        this.settings.autoConnect = autoConnectionDefaultValue;
                         return this;
                     }
                 }, {
